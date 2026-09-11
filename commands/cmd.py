@@ -10,71 +10,28 @@ class Cmd(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-
     @commands.command()
-    async def cmd(
-        self,
-        ctx,
-        *,
-        command=None
-    ):
+    async def cmd(self, ctx, *, command=None):
         if not is_owner(ctx.author):
-            return await ctx.send(
-                "Owner only."
-            )
-
+            return await ctx.send("Owner only.")
 
         if not command:
-            return await ctx.send(
-                "Usage: $cmd <terminal command>"
-            )
+            return await ctx.send("Usage: $cmd <real shell command>")
 
+        process = await asyncio.create_subprocess_shell(
+            command,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
 
-        try:
-            process = await asyncio.create_subprocess_shell(
-                command,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
+        stdout, stderr = await process.communicate()
+        output = (stdout or stderr).decode(errors="ignore")
 
+        if not output:
+            output = f"Command finished with code {process.returncode}"
 
-            stdout, stderr = await process.communicate()
-
-
-            output = (
-                stdout.decode(errors="ignore")
-                if stdout
-                else stderr.decode(errors="ignore")
-            )
-
-
-            if not output:
-                output = (
-                    f"Command finished "
-                    f"with code {process.returncode}"
-                )
-
-
-            if len(output) > 1900:
-                output = output[:1900]
-
-
-            await ctx.send(
-                f"```\n{output}\n```"
-            )
-
-
-            log_command(
-                ctx,
-                command
-            )
-
-
-        except Exception as e:
-
-            await ctx.send(
-                f"Error:\n```\n{e}\n```"
-            )
+        await ctx.send(f"```\n{output[:1900]}\n```")
+        log_command(ctx, command)
 
 
 async def setup(bot):
