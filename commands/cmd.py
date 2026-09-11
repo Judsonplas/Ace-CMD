@@ -1,4 +1,5 @@
 import asyncio
+import os
 
 from discord.ext import commands
 
@@ -16,21 +17,31 @@ class Cmd(commands.Cog):
             return await ctx.send("Owner only.")
 
         if not command:
-            return await ctx.send("Usage: $cmd <real shell command>")
+            return await ctx.send("Usage: $cmd <command>")
 
-        process = await asyncio.create_subprocess_shell(
-            command,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
+        try:
+            process = await asyncio.create_subprocess_shell(
+                command,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                cwd=os.getcwd()
+            )
 
-        stdout, stderr = await process.communicate()
-        output = (stdout or stderr).decode(errors="ignore")
+            stdout, stderr = await asyncio.wait_for(
+                process.communicate(),
+                timeout=30
+            )
 
-        if not output:
-            output = f"Command finished with code {process.returncode}"
+            output = stdout.decode(errors="ignore") or stderr.decode(errors="ignore")
+            if not output:
+                output = f"Exit code: {process.returncode}"
 
-        await ctx.send(f"```\n{output[:1900]}\n```")
+        except asyncio.TimeoutError:
+            return await ctx.send("Command timed out.")
+        except Exception as e:
+            return await ctx.send(str(e))
+
+        await ctx.send("```\n" + output[:1900] + "\n```")
         log_command(ctx, command)
 
 
