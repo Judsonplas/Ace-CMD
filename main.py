@@ -42,7 +42,8 @@ async def load_extensions():
         "commands.roles",
         "commands.ai",
         "commands.utility",
-        "commands.cmd"
+        "commands.cmd",
+        "commands.help"
     ]
 
 
